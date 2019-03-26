@@ -23,6 +23,27 @@ Sudoku::~Sudoku()
 {
 }
 
+//生成随机数组
+int* Sudoku::random()
+{
+    int *randomInt;
+    randomInt = (int*)malloc(sizeof(int) *9 );
+//     std::random_device r;
+//     std::default_random_engine e1(r());
+//     std::uniform_int_distribution<int> uniform_dist(0, 8);           //导致数独重置失败（局面不变）,与文件开头冲突
+    for (int i = 0; i < 9; i++) {
+        randomInt[i] = i+1;
+    }
+    for (int j = 0; j < 20; j++) {
+        int t = uniform_dist(e1);
+        int temp = randomInt[0];
+        randomInt[0] = randomInt[t];
+        randomInt[t] = temp;
+    }
+    return randomInt;
+}
+
+//将生成的随机数组放入局面的第一行
 void Sudoku::setRandomInArray()
 {
     int *value_random = random();
@@ -31,6 +52,7 @@ void Sudoku::setRandomInArray()
     }
 }
 
+//复制矩阵
 void Sudoku::copyArray(int srcArray[9][9], int dstArray[9][9])
 {
     for (int i = 0; i < 9; ++i) {
@@ -40,37 +62,38 @@ void Sudoku::copyArray(int srcArray[9][9], int dstArray[9][9])
     }
 }
 
-bool Sudoku::findFirstEmpty(int & x, int & y)
-{
-    for (int i = 0; i < 9; i++) {
-        for (int j = 0; j < 9; j++) {
-            if (data[i][j] == 0) {
-                x = i; y = j;
-                return true;
-            }
-        }
-    }
-    return false;
-}
+// bool Sudoku::findFirstEmpty(int & x, int & y)
+// {
+//     for (int i = 0; i < 9; i++) {
+//         for (int j = 0; j < 9; j++) {
+//             if (data[i][j] == 0) {
+//                 x = i; y = j;
+//                 return true;
+//             }
+//         }
+//     }
+//     return false;
+// }
 
+//判断规则，数字k是否已经存在行，列或者坐标(i,j)所在的九宫格里
 bool Sudoku::tryfill(int i, int j, int k)
 {
     if (this->data[i][j] != 0) {
         return false;
     }
-
+    //判断列中是否具有数字k
     for (int row = 0; row < 9; row++) {
         if (this->data[row][j] == k) {
             return false;
         }
     }
-
+    //判断行中是否具有数字k
     for (int col = 0; col < 9; col++) {
         if (this->data[i][col] == k) {
             return false;
         }
     }
-
+    //判断数字k是否在坐标(i,j)所在的九宫格内
     int up1 = (i / 3) * 3 + 3;
     int up2 = (j / 3) * 3 + 3;
     for (int p = up1 - 3; p < up1; ++p) {
@@ -93,6 +116,7 @@ void Sudoku::next(int & x, int & y)
     }
 }
 
+//上一个坐标
 void Sudoku::previous(int & x, int & y)
 {
     --y;
@@ -112,7 +136,7 @@ void Sudoku::clear()
     }
 }
 
-
+//生成终局
 void Sudoku::initsudoku()
 {
     clear();
@@ -120,35 +144,33 @@ void Sudoku::initsudoku()
     int row=1, col = 0;
     int marks[9][9][9] = { {{0}} };	//标记是否被尝试过
     for (;;) {
-        if (row == 9 && col == 9) {
+        if (row == 9 && col == 9) {                         //如果已经填充满了，则返回
             return;
         }
 
-        int *ranNum = random();
+        int *ranNum = random();                             //产生随机数组,实际只需要一个
         bool fill_row_success = false;
         for (int k = 0; k < 9; k++) {
-            if (marks[row][col][ranNum[k] - 1] != 0) {
+            if (marks[row][col][ranNum[k] - 1] != 0) {      //如果数字ranNum[k]已经被尝试过
                 continue;
             }
-            if (tryfill(row, col, ranNum[k])) {
-                //old_row = row, old_col = col;
-                //do {
-                    next(row, col);
-                //} while (this->data[row][col] != 0);
-                fill_row_success = true;
+            //从第二行开始，依次填写数字，并且判断是否重复
+            if (tryfill(row, col, ranNum[k])) {             //如果可以填写
+                next(row, col);                             //则跳转下一个格子
+                fill_row_success = true;                    //填充成功
                 break;
             }
         }
-        if (!fill_row_success) {
+        if (!fill_row_success) {                            //如果填充不成功
             for (int i = 0; i < 9; ++i) {
-                marks[row][col][i] = 0; //重置状态
+                marks[row][col][i] = 0;                     //重置状态
             }
-            previous(row, col); // 回溯, 迭代后两个值都会发生变化
+            previous(row, col);                             // 回溯, 迭代后两个值都会发生变化
             if (this->data[row][col] != 0) {
                 marks[row][col][this->data[row][col] - 1] = 1; //已尝试过，标记
             }
 
-            if (row == 0 && col == 8) {  //结束
+            if (row == 0 && col == 8) {                     //如果回溯到初始状态，则表示结束（一般不会出现这种现象）
                 break;
             }
             this->data[row][col] = 0;
@@ -279,21 +301,4 @@ bool Sudoku::checkSolution(int answer[9][9])
     return true;
 }
 
-int* Sudoku::random()
-{
-    int *randomInt;
-    randomInt = (int*)malloc(sizeof(int) *9 );
-    std::random_device r;
-    std::default_random_engine e1(r());
-    std::uniform_int_distribution<int> uniform_dist(0, 8);
-    for (int i = 0; i < 9; i++) {
-        randomInt[i] = i+1;
-    }
-    for (int j = 0; j < 20; j++) {
-        int t = uniform_dist(e1);
-        int temp = randomInt[0];
-        randomInt[0] = randomInt[t];
-        randomInt[t] = temp;
-    }
-    return randomInt;
-}
+
